@@ -1,0 +1,2 @@
+asqav>=0.4
+openai>=1.0
