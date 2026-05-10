@@ -61,7 +61,7 @@ manifest = OpenAI(
 
 # Asqav governs the agent itself.
 asqav.init(api_key=os.environ["ASQAV_API_KEY"])
-agent = asqav.Agent(name="finance-bot", capabilities=["wire_transfer"])
+agent = asqav.Agent.create("finance-bot", capabilities=["wire_transfer"])
 
 prompt = sys.argv[1] if len(sys.argv) > 1 else "noop"
 
@@ -77,18 +77,18 @@ model = resp.model
 text = resp.choices[0].message.content
 cost = float(resp.usage.total_tokens) * 0.000002  # placeholder
 
-# Step 2: Asqav signs the agent action so it has a verifiable receipt.
-with agent.action(action_type="wire_transfer", payload={"prompt": prompt, "extracted": text}) as a:
-    # The "action" here is whatever your agent decides to do with the model output.
-    # In this demo we just record the extraction. In production you would gate
-    # the actual transfer on a HITL approval and let Asqav stamp it on the way out.
-    a.metadata["model"] = model
-    a.metadata["cost_usd"] = cost
-    sig = a.signature_id
+# Step 2: Asqav signs the agent action so it has a verifiable Compliance Receipt.
+sig = agent.sign(
+    "wire_transfer",
+    context={"prompt": prompt, "extracted": text, "model": model, "cost_usd": cost},
+    receipt_type="protectmcp:decision",
+    risk_class="high",
+    model_name=model,
+)
 
 print(f"Manifest routed to: {model}  cost: ${cost:.4f}")
-print(f"Asqav signature:    {sig}")
-print(f"Verify:             https://www.asqav.com/verify/{sig}")
+print(f"Asqav signature:    {sig.signature_id}")
+print(f"Verify:             {sig.verification_url}")
 ```
 
 ## Why pair them
