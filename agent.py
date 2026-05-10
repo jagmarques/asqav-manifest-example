@@ -5,7 +5,7 @@ Two SDKs, one flow:
   prompt
     -> Manifest /v1/chat/completions (picks the model)
     -> agent decides on an action
-    -> Asqav signs the action with ML-DSA-65 (verifiable receipt)
+    -> Asqav signs the action with ML-DSA-65 (Compliance Receipt)
     -> public verify URL anyone can audit
 
 Run:
@@ -31,7 +31,7 @@ def main() -> int:
     )
 
     asqav.init(api_key=os.environ["ASQAV_API_KEY"])
-    agent = asqav.Agent(name="finance-bot", capabilities=["wire_transfer"])
+    agent = asqav.Agent.create("finance-bot", capabilities=["wire_transfer"])
 
     resp = manifest.chat.completions.create(
         model="auto",
@@ -48,17 +48,22 @@ def main() -> int:
     tokens = resp.usage.total_tokens if resp.usage else 0
     cost = float(tokens) * 0.000002  # placeholder unit price
 
-    with agent.action(
-        action_type="wire_transfer",
-        payload={"prompt": prompt, "extracted": text},
-    ) as a:
-        a.metadata["model"] = model
-        a.metadata["cost_usd"] = cost
-        sig_id = a.signature_id
+    sig = agent.sign(
+        "wire_transfer",
+        context={
+            "prompt": prompt,
+            "extracted": text,
+            "model": model,
+            "cost_usd": cost,
+        },
+        receipt_type="protectmcp:decision",
+        risk_class="high",
+        model_name=model,
+    )
 
     print(f"Manifest routed to: {model}  cost: ${cost:.4f}")
-    print(f"Asqav signature:    {sig_id}")
-    print(f"Verify:             https://www.asqav.com/verify/{sig_id}")
+    print(f"Asqav signature:    {sig.signature_id}")
+    print(f"Verify:             {sig.verification_url}")
     return 0
 
 
