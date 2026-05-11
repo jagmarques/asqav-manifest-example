@@ -1,4 +1,4 @@
-# asqav + manifest example
+# Asqav + Manifest example
 
 Two questions you have to answer for any AI agent in regulated work:
 
